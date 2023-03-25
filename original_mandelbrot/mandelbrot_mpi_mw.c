@@ -197,4 +197,18 @@ calc_vals(i);
  }
  MPI_Finalize();
  return 0;
+ if (doIO && myRank==1 ){
+ if (verbose) {printf("Writing out results from process %d \n", myRank);}
+ write_to_file("mandelbrot.dat");
+ }
+ /* Record end time */
+ MPI_Barrier(MPI_COMM_WORLD);
+ end_time=MPI_Wtime();
+ /* Record end time. The barrier synchronises the process so they all measure the same time */
+ if (myRank==0){
+ printf("STATS (num procs, elapsed time): %d %f\n", nProcs, end_time-start_time);
+ }
+ MPI_Finalize();
+ return 0;
 }
+         
