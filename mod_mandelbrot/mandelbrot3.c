@@ -25,7 +25,7 @@ void calculate_mandelbrot(int start_col, int end_col, double complex *plane, int
                 break;
             }
         }
-        output[i] = n;
+        output[i - start_col] = n;
     }
 }
 
@@ -45,7 +45,7 @@ int main() {
         plane[i] = x + y_min * I;
     }
 
-    int (*output_ptr)[HEIGHT] = output;
+    int *output_ptr = &output[0][0];
     int num_cols_per_thread = WIDTH / 4;
 
     start = clock();
@@ -67,8 +67,8 @@ int main() {
         calculate_mandelbrot(start_col, end_col, local_plane, local_output);
 
         // Copy the output of each thread back to the main output array
-        int (*output_ptr_thread)[HEIGHT] = output_ptr + start_col;
-        memcpy(output_ptr_thread, local_output, num_cols_per_thread * sizeof(int) * HEIGHT);
+        int *output_ptr_thread = output_ptr + start_col * HEIGHT;
+        memcpy(output_ptr_thread, local_output, num_cols_per_thread * sizeof(int));
     }
 
     end = clock();
