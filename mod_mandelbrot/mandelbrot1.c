@@ -4,7 +4,7 @@
 #include <math.h>
 #include <complex.h>
 #include <time.h>
-#include <mpi.h>
+#include <omp.h>
 
 #define WIDTH 1200
 #define HEIGHT 800
@@ -16,7 +16,7 @@ void calculate_mandelbrot(int start_col, int end_col, double complex *plane, int
 
     for (i = start_col; i <= end_col; i++) {
         c = plane[i];
-        z = 0;
+        z = c;
         n = 0;
         for (j = 0; j < MAX_ITER; j++) {
             z = z*z + c;
@@ -29,7 +29,7 @@ void calculate_mandelbrot(int start_col, int end_col, double complex *plane, int
     }
 }
 
-int main(int argc, char **argv) {
+int main() {
     int i, j, n;
     double complex plane[WIDTH];
     int *output = malloc(WIDTH * HEIGHT * sizeof(int));
@@ -45,55 +45,52 @@ int main(int argc, char **argv) {
         plane[i] = x + y_min * I;
     }
 
-    MPI_Init(&argc, &argv);
-
-    int num_procs, rank;
-    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    int num_cols_per_proc = WIDTH / num_procs;
-    int start_col = rank * num_cols_per_proc;
-    int end_col = start_col + num_cols_per_proc - 1;
-
-    double complex *local_plane = malloc((num_cols_per_proc + 2) * sizeof(double complex));
-    memcpy(local_plane + 1, plane + start_col, num_cols_per_proc * sizeof(double complex));
-
-    // Add two extra values to the buffer
-    local_plane[0] = plane[start_col-1];
-    local_plane[num_cols_per_proc+1] = plane[end_col+1];
-
-    int *local_output = malloc(num_cols_per_proc * sizeof(int));
+    int num_cols_per_thread = WIDTH / 4;
 
     start = clock();
 
-    calculate_mandelbrot(start_col, end_col, local_plane, local_output);
+    #pragma omp parallel num_threads(4)
+    {
+        int thread_num = omp_get_thread_num();
+        int start_col = thread_num * num_cols_per_thread;
+        int end_col = start_col + num_cols_per_thread - 1;
 
-    MPI_Gather(local_output, num_cols_per_proc, MPI_INT, output, num_cols_per_proc, MPI_INT, 0, MPI_COMM_WORLD);
+        double complex *local_plane = malloc((num_cols_per_thread + 2) * sizeof(double complex));
+        memcpy(local_plane + 1, plane + start_col, num_cols_per_thread * sizeof(double complex));
+
+        // Add two extra values to the buffer
+        local_plane[0] = plane[start_col-1];
+        local_plane[num_cols_per_thread+1] = plane[end_col+1];
+
+        int *local_output = malloc(num_cols_per_thread * sizeof(int));
+        calculate_mandelbrot(start_col, end_col, local_plane, local_output);
+
+        // Copy the output of each thread back to the main output array
+        int *output_ptr_thread = output + start_col * HEIGHT;
+        memcpy(output_ptr_thread, local_output, num_cols_per_thread * sizeof(int));
+
+        free(local_plane);
+        free(local_output);
+    }
 
     end = clock();
 
-    if (rank == 0) {
-        printf("Execution time: %f seconds\n", (double)(end - start)/CLOCKS_PER_SEC);
+    printf("Execution time: %f seconds\n", (double)(end - start)/CLOCKS_PER_SEC);
 
-        FILE *fp = fopen("mandelbrot.pgm", "w");
-        fprintf(fp, "P2\n%d %d\n%d\n", WIDTH, HEIGHT, MAX_ITER);
+    FILE *fp = fopen("mandelbrot.pgm", "w");
+    fprintf(fp, "P2\n%d %d\n%d\n", WIDTH, HEIGHT, MAX_ITER);
 
-        for (j = 0; j < HEIGHT; j++) {
-            for (i = 0; i < WIDTH; i++) {
-                n = output[i * HEIGHT + j];
-                fprintf(fp, "%d ", n);
-            }
-            fprintf(fp, "\n");
+    for (j = 0; j < HEIGHT; j++) {
+        for (i = 0; i < WIDTH; i++) {
+            n = output[i * HEIGHT + j];
+            fprintf(fp, "%d ", n);
         }
-
-        fclose(fp);
-        free(output);
+        fprintf(fp, "\n");
     }
 
-    free(local_plane);
-    free(local_output);
-
-    MPI_Finalize();
+    fclose(fp);
+    free(output);
 
     return 0;
 }
+
