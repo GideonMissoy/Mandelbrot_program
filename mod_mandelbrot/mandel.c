@@ -88,46 +88,5 @@ int main() {
 
     fclose(fp);
 
-
-void write_bmp(const char* filename, int width, int height, int* data) {
-    unsigned char bmp_header[54] = {
-        'B', 'M', 0,0,0,0, 0,0, 0,0, 54,0,0,0, 40,0,0,0,
-        0,0,0,0, 0,0,0,0, 1,0, 24,0, 0,0,0,0, 0,0,0,0,
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
-    };
-
-    int padding = (4 - (width * 3) % 4) % 4;
-    int size = width * height * 3 + height * padding;
-
-    bmp_header[2] = (unsigned char)(size);
-    bmp_header[3] = (unsigned char)(size >> 8);
-    bmp_header[4] = (unsigned char)(size >> 16);
-    bmp_header[5] = (unsigned char)(size >> 24);
-
-    bmp_header[18] = (unsigned char)(width);
-    bmp_header[19] = (unsigned char)(width >> 8);
-    bmp_header[20] = (unsigned char)(width >> 16);
-    bmp_header[21] = (unsigned char)(width >> 24);
-
-    bmp_header[22] = (unsigned char)(height);
-    bmp_header[23] = (unsigned char)(height >> 8);
-    bmp_header[24] = (unsigned char)(height >> 16);
-    bmp_header[25] = (unsigned char)(height >> 24);
-
-    FILE* fp = fopen(filename, "wb");
-    fwrite(bmp_header, 1, 54, fp);
-
-    for (int j = height - 1; j >= 0; j--) {
-        for (int i = 0; i < width; i++) {
-            int n = data[i + j * width];
-            unsigned char color[3] = {(unsigned char)(n * 255 / MAX_ITER), 0, 0};
-            fwrite(color, 1, 3, fp);
-        }
-        if (padding) {
-            unsigned char pad[3] = {0, 0, 0};
-            fwrite(pad, 1, padding, fp);
-        }
-    }
-
-    fclose(fp);
+    return 0;
 }
