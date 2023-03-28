@@ -9,5 +9,5 @@ plt.plot(num_processes, speedup)
 plt.title('Speedup vs. Number of MPI Processes')
 plt.xlabel('Number of MPI Processes')
 plt.ylabel('Speedup')
-plt.show()
 
+plt.savefig('plot.pdf', format='pdf')
