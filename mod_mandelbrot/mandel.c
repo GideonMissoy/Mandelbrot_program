@@ -32,7 +32,7 @@ void calculate_mandelbrot(int start_col, int end_col, double complex *plane, int
 int main() {
     int i, j, n;
     double complex plane[WIDTH];
-    int output[WIDTH][HEIGHT];
+    int *output = malloc(WIDTH * HEIGHT * sizeof(int));
     clock_t start, end;
 
     double x_min = -2.5;
@@ -45,7 +45,6 @@ int main() {
         plane[i] = x + y_min * I;
     }
 
-    int *output_ptr = &output[0][0];
     int num_cols_per_thread = WIDTH / 4;
 
     start = clock();
@@ -56,19 +55,22 @@ int main() {
         int start_col = thread_num * num_cols_per_thread;
         int end_col = start_col + num_cols_per_thread - 1;
 
-        double complex local_plane[num_cols_per_thread+2];
+        double complex *local_plane = malloc((num_cols_per_thread + 2) * sizeof(double complex));
         memcpy(local_plane + 1, plane + start_col, num_cols_per_thread * sizeof(double complex));
 
         // Add two extra values to the buffer
         local_plane[0] = plane[start_col-1];
         local_plane[num_cols_per_thread+1] = plane[end_col+1];
 
-        int local_output[num_cols_per_thread];
+        int *local_output = malloc(num_cols_per_thread * sizeof(int));
         calculate_mandelbrot(start_col, end_col, local_plane, local_output);
 
         // Copy the output of each thread back to the main output array
-        int *output_ptr_thread = &output[start_col][0];
+        int *output_ptr_thread = output + start_col * HEIGHT;
         memcpy(output_ptr_thread, local_output, num_cols_per_thread * sizeof(int));
+
+        free(local_plane);
+        free(local_output);
     }
 
     end = clock();
@@ -80,13 +82,14 @@ int main() {
 
     for (j = 0; j < HEIGHT; j++) {
         for (i = 0; i < WIDTH; i++) {
-            n = output[i][j];
+            n = output[i * HEIGHT + j];
             fprintf(fp, "%d ", n);
         }
         fprintf(fp, "\n");
     }
 
     fclose(fp);
+    free(output);
 
     return 0;
 }

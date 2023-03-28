@@ -76,10 +76,6 @@ int main() {
     printf("Execution time: %f seconds\n", (double)(end - start)/CLOCKS_PER_SEC);
 
     FILE *fp = fopen("mandelbrot.pgm", "w");
-    if (fp == NULL) {
-        printf("Error: failed to open output file\n");
-        exit(EXIT_FAILURE);
-    }
     fprintf(fp, "P2\n%d %d\n%d\n", WIDTH, HEIGHT, MAX_ITER);
 
     for (j = 0; j < HEIGHT; j++) {
@@ -94,4 +90,3 @@ int main() {
 
     return 0;
 }
-
