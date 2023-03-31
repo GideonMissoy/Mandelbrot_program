@@ -1,95 +1,85 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <complex.h>
-#include <time.h>
-#include <omp.h>
+#include <mpi.h>
 
-#define WIDTH 1200
-#define HEIGHT 800
-#define MAX_ITER 1000
+#define WIDTH 1000
+#define HEIGHT 1000
+#define MAX_ITERATIONS 1000
 
-void calculate_mandelbrot(int start_col, int end_col, double complex *plane, int *output) {
-    int i, j, k, n;
-    double complex c, z;
-
-    for (i = start_col; i <= end_col; i++) {
-        c = plane[i];
-        z = 0;
-        n = 0;
-        for (j = 0; j < MAX_ITER; j++) {
-            z = z*z + c;
-            if (cabs(z) > 2) {
-                n = j;
-                break;
-            }
-        }
-        output[i - start_col] = n;
+int mandelbrot(double x, double y) {
+    double real = x;
+    double imag = y;
+    int iterations = 0;
+    while (real*real + imag*imag <= 4 && iterations < MAX_ITERATIONS) {
+        double real_new = real*real - imag*imag + x;
+        double imag_new = 2*real*imag + y;
+        real = real_new;
+        imag = imag_new;
+        iterations++;
     }
+    return iterations;
 }
 
-int main() {
-    int i, j, n;
-    double complex plane[WIDTH];
-    int *output = malloc(WIDTH * HEIGHT * sizeof(int));
-    clock_t start, end;
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
 
-    double x_min = -2.5;
-    double x_max = 1;
-    double y_min = -1;
-    double y_max = 1;
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    for (i = 0; i < WIDTH; i++) {
-        double x = x_min + (x_max - x_min)/WIDTH * i;
-        plane[i] = x + y_min * I;
+    double x_min = -2, x_max = 1, y_min = -1, y_max = 1;
+    double x_step = (x_max - x_min) / WIDTH;
+    double y_step = (y_max - y_min) / HEIGHT;
+
+    int rows_per_process = HEIGHT / size;
+    int start_row = rank * rows_per_process;
+    int end_row = (rank + 1) * rows_per_process - 1;
+
+    if (rank == size - 1) {
+        end_row = HEIGHT - 1;
     }
 
-    int num_cols_per_thread = WIDTH / 4;
+    int columns_per_process = WIDTH / size;
+    double buffer[columns_per_process + 2];
 
-    start = clock();
-
-    #pragma omp parallel num_threads(4)
-    {
-        int thread_num = omp_get_thread_num();
-        int start_col = thread_num * num_cols_per_thread;
-        int end_col = start_col + num_cols_per_thread - 1;
-
-        double complex *local_plane = malloc((num_cols_per_thread + 2) * sizeof(double complex));
-        memcpy(local_plane + 1, plane + start_col, num_cols_per_thread * sizeof(double complex));
-
-        // Add two extra values to the buffer
-        local_plane[0] = plane[start_col-1];
-        local_plane[num_cols_per_thread+1] = plane[end_col+1];
-
-        int *local_output = malloc(num_cols_per_thread * sizeof(int));
-        calculate_mandelbrot(start_col, end_col, local_plane, local_output);
-
-        // Copy the output of each thread back to the main output array
-        int *output_ptr_thread = output + start_col * HEIGHT;
-        memcpy(output_ptr_thread, local_output, num_cols_per_thread * sizeof(int));
-
-        free(local_plane);
-        free(local_output);
-    }
-
-    end = clock();
-
-    printf("Execution time: %f seconds\n", (double)(end - start)/CLOCKS_PER_SEC);
-
-    FILE *fp = fopen("mandelbrot.pgm", "w");
-    fprintf(fp, "P2\n%d %d\n%d\n", WIDTH, HEIGHT, MAX_ITER);
-
-    for (j = 0; j < HEIGHT; j++) {
-        for (i = 0; i < WIDTH; i++) {
-            n = output[i * HEIGHT + j];
-            fprintf(fp, "%d ", n);
+    for (int row = start_row; row <= end_row; row++) {
+        int index = 0;
+        for (int col = rank * columns_per_process; col < (rank + 1) * columns_per_process; col++) {
+            double x = x_min + col * x_step;
+            double y = y_min + row * y_step;
+            int iterations = mandelbrot(x, y);
+            buffer[index] = x;
+            buffer[index + 1] = y;
+            buffer[index + 2] = (double)iterations;
+            index += 3;
         }
-        fprintf(fp, "\n");
+        MPI_Send(buffer, columns_per_process + 2, MPI_DOUBLE, 0, row, MPI_COMM_WORLD);
     }
 
-    fclose(fp);
-    free(output);
+    if (rank == 0) {
+        int row = 0;
+        double result[3];
+        for (int i = 0; i < HEIGHT; i++) {
+            for (int j = 0; j < size; j++) {
+                MPI_Recv(buffer, columns_per_process + 2, MPI_DOUBLE, j, row, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                int index = 0;
+                for (int col = j * columns_per_process; col < (j + 1) * columns_per_process; col++) {
+                    double x = buffer[index];
+                    double y = buffer[index + 1];
+                    double iterations = buffer[index + 2];
+                    result[0] = x;
+                    result[1] = y;
+                    result[2] = iterations;
+                    printf("%f %f %f\n", result[0], result[1], result[2]);
+                    index += 3;
+                }
+                row++;
+            }
+        }
+    }
+
+    MPI_Finalize();
 
     return 0;
 }
+
