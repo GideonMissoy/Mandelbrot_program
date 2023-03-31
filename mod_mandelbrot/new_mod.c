@@ -6,8 +6,8 @@
 #include <time.h>
 #include <omp.h>
 
-#define WIDTH 12000
-#define HEIGHT 8000
+#define WIDTH 1200
+#define HEIGHT 800
 #define MAX_ITER 1000
 
 void calculate_mandelbrot(int start_col, int end_col, double complex *plane, int *output) {
@@ -56,11 +56,10 @@ int main() {
         int end_col = start_col + num_cols_per_thread - 1;
 
         double complex *local_plane = malloc((num_cols_per_thread + 2) * sizeof(double complex));
+        // Copy an extra column on each side
+        local_plane[0] = plane[start_col > 0 ? start_col-1 : 0];
         memcpy(local_plane + 1, plane + start_col, num_cols_per_thread * sizeof(double complex));
-
-        // Add two extra values to the buffer
-        local_plane[0] = plane[start_col-1];
-        local_plane[num_cols_per_thread+1] = plane[end_col+1];
+        local_plane[num_cols_per_thread+1] = plane[end_col < WIDTH-1 ? end_col+1 : WIDTH-1];
 
         int *local_output = malloc(num_cols_per_thread * sizeof(int));
         calculate_mandelbrot(start_col, end_col, local_plane, local_output);
@@ -85,4 +84,3 @@ int main() {
 
     return 0;
 }
-
