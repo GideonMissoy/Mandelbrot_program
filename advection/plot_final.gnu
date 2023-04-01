@@ -10,11 +10,11 @@
 # Send output to a PNG file
 set terminal png  enhanced 
 # Set the name of the output file
-set output "final1.png"
+set output "final2.png"
 
 # Set ranges and labels for axes
-set xrange [0:30.0]
-set yrange [0:30.0]
+set xrange [0:1.0]
+set yrange [0:1.0]
 set xlabel "x"
 set ylabel "y"
 
@@ -25,6 +25,6 @@ set size square
 set cbrange [0:1]
 
 # Plot the data 
-plot "output.dat" with image 
+plot "vert_shear.dat" with image 
 
 # End of file
