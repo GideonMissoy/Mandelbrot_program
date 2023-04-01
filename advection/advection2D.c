@@ -18,8 +18,10 @@ Notes: The time step is calculated using the CFL condition
                      Include header files 
 **********************************************************************/
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <omp.h>
 
 /*********************************************************************
                       Main function
@@ -172,16 +174,28 @@ there are no data dependencies between the iterations that can be effectively ex
   } // time loop
   
   /*** Write array of final u values out to file ***/
+    /* Write array of final u values out to file */
   FILE *finalfile;
   finalfile = fopen("final.dat", "w");
-  /* LOOP 10 */
-  #pragma omp parallel for
   for (int i=0; i<NX+2; i++){
     for (int j=0; j<NY+2; j++){
       fprintf(finalfile, "%g %g %g\n", x[i], y[j], u[i][j]);
     }
+    fprintf(finalfile, "\n"); // Blank line to indicate end of row
   }
   fclose(finalfile);
+
+  /* Generate a gnuplot script */
+  FILE *gnuplotscript;
+  gnuplotscript = fopen("plotscript.gnu", "w");
+  fprintf(gnuplotscript, "set pm3d\n");
+  fprintf(gnuplotscript, "set view map\n");
+  fprintf(gnuplotscript, "splot 'final.dat' u 1:2:3\n");
+  fclose(gnuplotscript);
+
+  /* Call gnuplot to generate a plot */
+  system("gnuplot plotscript.gnu");
+
 
   return 0;
 }
