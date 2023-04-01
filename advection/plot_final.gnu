@@ -10,7 +10,7 @@
 # Send output to a PNG file
 set terminal png  enhanced 
 # Set the name of the output file
-set output "final.png"
+set output "final1.png"
 
 # Set ranges and labels for axes
 set xrange [0:1.0]
@@ -25,6 +25,6 @@ set size square
 set cbrange [0:1]
 
 # Plot the data 
-plot "initial.dat" with image 
+plot "output.dat" with image 
 
 # End of file
