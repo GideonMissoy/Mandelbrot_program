@@ -87,27 +87,34 @@ int main(){
 
   /*** Place x points in the middle of the cell ***/
   /* LOOP 1 */
+/* the loop only has NX+2 iterations, which is a relatively small number, so parallelizing it may not provide any significant performance improvement. */
   for (int i=0; i<NX+2; i++){
     x[i] = ( (float) i - 0.5) * dx;
   }
 
   /*** Place y points in the middle of the cell ***/
   /* LOOP 2 */
-  for (int j=0; j<NY+2; j++){
-    y[j] = ( (float) j - 0.5) * dy;
-  }
+  #pragma omp parallel for
+    for (int j=0; j<NY+2; j++){
+      y[j] = ( (float) j - 0.5) * dy;
+    }
+
 
   /*** Set up Gaussian initial conditions ***/
   /* LOOP 3 */
-  for (int i=0; i<NX+2; i++){
+  #pragma omp parallel for
+for (int i=0; i<NX+2; i++){
     for (int j=0; j<NY+2; j++){
-      x2      = (x[i]-x0) * (x[i]-x0);
-      y2      = (y[j]-y0) * (y[j]-y0);
-      u[i][j] = exp( -1.0 * ( (x2/(2.0*sigmax2)) + (y2/(2.0*sigmay2)) ) );
+        x2      = (x[i]-x0) * (x[i]-x0);
+        y2      = (y[j]-y0) * (y[j]-y0);
+        u[i][j] = exp( -1.0 * ( (x2/(2.0*sigmax2)) + (y2/(2.0*sigmay2)) ) );
     }
-  }
+}
+
 
   /*** Write array of initial u values out to file ***/
+/* The loop cannot be parallelised, there are no dependencies between the iterations.
+the overhead of parallelization may outweigh any potential benefits. */
   FILE *initialfile;
   initialfile = fopen("initial.dat", "w");
   /* LOOP 4 */
@@ -124,6 +131,7 @@ int main(){
     
     /*** Apply boundary conditions at u[0][:] and u[NX+1][:] ***/
     /* LOOP 6 */
+/* The loop cannot be parallelised. It is unlikely that parallelizing this loop would provide a significant speedup since there are only NY+2 iteration. */
     for (int j=0; j<NY+2; j++){
       u[0][j]    = bval_left;
       u[NX+1][j] = bval_right;
@@ -131,6 +139,8 @@ int main(){
 
     /*** Apply boundary conditions at u[:][0] and u[:][NY+1] ***/
     /* LOOP 7 */
+/* The loop cannot be parallelised since there are only NX+2 iterations,
+there are no data dependencies between the iterations that can be effectively exploited. */
     for (int i=0; i<NX+2; i++){
       u[i][0]    = bval_lower;
       u[i][NY+1] = bval_upper;
@@ -139,21 +149,25 @@ int main(){
     /*** Calculate rate of change of u using leftward difference ***/
     /* Loop over points in the domain but not boundary values */
     /* LOOP 8 */
-    for (int i=1; i<NX+1; i++){
-      for (int j=1; j<NY+1; j++){
-	dudt[i][j] = -velx * (u[i][j] - u[i-1][j]) / dx
-	            - vely * (u[i][j] - u[i][j-1]) / dy;
-      }
-    }
+    #pragma omp parallel for
+      for (int i=1; i<NX+1; i++){
+       for (int j=1; j<NY+1; j++){
+         dudt[i][j] = -velx * (u[i][j] - u[i-1][j]) / dx
+                 - vely * (u[i][j] - u[i][j-1]) / dy;
+       }
+     }
+
     
     /*** Update u from t to t+dt ***/
     /* Loop over points in the domain but not boundary values */
     /* LOOP 9 */
-    for	(int i=1; i<NX+1; i++){
-      for (int j=1; j<NY+1; j++){
-	u[i][j] = u[i][j] + dudt[i][j] * dt;
+    #pragma omp parallel for
+      for (int i=1; i<NX+1; i++){
+        for (int j=1; j<NY+1; j++){
+          u[i][j] = u[i][j] + dudt[i][j] * dt;
+        }
       }
-    }
+
     
   } // time loop
   
@@ -161,6 +175,7 @@ int main(){
   FILE *finalfile;
   finalfile = fopen("final.dat", "w");
   /* LOOP 10 */
+  #pragma omp parallel for
   for (int i=0; i<NX+2; i++){
     for (int j=0; j<NY+2; j++){
       fprintf(finalfile, "%g %g %g\n", x[i], y[j], u[i][j]);
