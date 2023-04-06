@@ -81,7 +81,7 @@ int main(){
 	#pragma omp paralle for private (x2, y2)
 	for (int i = 1; i <= NX; i++)
 	{
-		x2 = (x[i] - x0)(x[i] - x0);
+		x2 = (x[i] - x0) * (x[i] - x0);
 		for (int j = 1; j <= NY; j++)
 		{
 			y2 = (y[j] - y0) * (y[j] - y0);
@@ -92,7 +92,7 @@ int main(){
 	for (int i = 0; i <= NX + 1; i++)
 	{
 		u[i][0] = bval_lower;
-		uu[i][NY + 1] = bval_upper;
+		u[i][NY + 1] = bval_upper;
 	}
 	for (int j = 0; j <= NY +1; j++)
 	{
@@ -107,7 +107,7 @@ int main(){
 		#pragma omp parallel for
 		for (int i = 1; i <= NX; i++)
 		{
-			for (int y = 1; j <= NY; j++)
+			for (int j = 1; j <= NY; j++)
 			{
 				float u_x = (u[i][j] - u[i-1][j]) / dx;
 				float u_y = (u[i][j] - u[i][j-1]) / dy;
@@ -119,7 +119,7 @@ int main(){
 				{
 					u_y = (u[i][j+1] - u[i][j]) / dy;
 				}
-				dudt[i][j] = -velxu_x - velyu_y;
+				dudt[i][j] = -velx(u_x) - vely(u_y);
 			}
 		}
 
