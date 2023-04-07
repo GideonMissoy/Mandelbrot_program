@@ -119,7 +119,8 @@ int main(){
 				{
 					u_y = (u[i][j+1] - u[i][j]) / dy;
 				}
-				dudt[i][j] = -velx(u_x) - vely(u_y);
+				dudt[i][j] = -velx * (u[i][j] - u[i-1][j]) / dx
+					- vely * (u[i][j] - u[i][j-1]) / dy;
 			}
 		}
 
@@ -129,7 +130,7 @@ int main(){
 		{
 			for (int j = 1; j <= NY; j++)
 			{
-				u[i][j] = u[i][j] + dtdudt[i][j];
+				u[i][j] = u[i][j] + dudt[i][j] * dt;
 			}
 		}
 

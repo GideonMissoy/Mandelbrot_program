@@ -10,7 +10,7 @@
 # Send output to a PNG file
 set terminal png  enhanced 
 # Set the name of the output file
-set output "final5.png"
+set output "output.png"
 
 # Set ranges and labels for axes
 set xrange [0:1.0]
