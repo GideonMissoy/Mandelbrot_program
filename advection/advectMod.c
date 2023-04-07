@@ -78,7 +78,7 @@ int main(){
 	}
 
 	/* Set initial conditions */
-	#pragma omp paralle for private (x2, y2)
+	#pragma omp parallel for private (x2, y2)
 	for (int i = 1; i <= NX; i++)
 	{
 		x2 = (x[i] - x0) * (x[i] - x0);
