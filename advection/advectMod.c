@@ -151,14 +151,15 @@ int main(){
 	
 	/* Output final state of u */
 	FILE *gnuplotscript;
-	gnuplotscript = fopen("plot_final.gnu", "w");
+	gnuplotscript = fopen("plotscript.gnu", "w");
 	fprintf(gnuplotscript, "set pm3d\n");
 	fprintf(gnuplotscript, "set view map\n");
+	fprintf(gnuplotscript, "set output 'outPut.png'\n");
 	fprintf(gnuplotscript, "splot 'final.dat' u 1:2:3\n");
 	fclose(gnuplotscript);
-
+	fclose(gp);
 	/*call gnuplot to generate a plot */
-	system("gnuplot plot_final.gnu");
+	system("gnuplot plotscript.gnu");
 
 	return (0);
 }

@@ -25,6 +25,6 @@ set size square
 set cbrange [0:1]
 
 # Plot the data 
-plot "output.dat" with image 
+plot "final.dat" with image 
 
 # End of file
