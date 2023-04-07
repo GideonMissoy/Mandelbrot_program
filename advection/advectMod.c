@@ -151,14 +151,14 @@ int main(){
 	
 	/* Output final state of u */
 	FILE *gnuplotscript;
-	gnuplotscript = fopen("advecmod.gnu", "w");
+	gnuplotscript = fopen("advecmod.dat", "w");
 	fprintf(gnuplotscript, "set pm3d\n");
 	fprintf(gnuplotscript, "set view map\n");
 	fprintf(gnuplotscript, "splot 'final.dat' u 1:2:3\n");
 	fclose(gnuplotscript);
 
 	/*call gnuplot to generate a plot */
-	system("gnuplot plotscript.gnu");
+	system("gnuplot advecMod.dat");
 
 	return (0);
 }
